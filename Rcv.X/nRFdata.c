@@ -48,14 +48,14 @@ BYTE OutByte(BYTE byte)
 BYTE* OutData(BYTE data[], BYTE length)
 {
 	int index = 0;
-	BYTE statuses[];
+	BYTE response[];
 	
 	for(index = 0; index < length; index++)
 	{
-		statuses[index] = OutByte(data[index]);
+		response[index] = OutByte(data[index]);
 	}
 
-	return statuses;
+	return response;
 }
 BYTE OutCommand(BYTE command)
 {
@@ -67,20 +67,21 @@ BYTE OutCommand(BYTE command)
 }
 BYTE OutCommand_(BYTE command, BYTE byte)
 {
-	BYTE status;
+	BYTE response;
 	RF_CSN = 0;
 	OutByte(command);
-	status = OutByte(byte);
+	response = OutByte(byte);
 	RF_CSN = 1;
-	return status;
+	return response;
 }
 BYTE* OutCommand__(BYTE command, BYTE data[], BYTE dataLength)
 {
+	BYTE *response;
 	RF_CSN = 0;
 	OutByte(command);
-	OutData(data, dataLength);
+	response = OutData(data, dataLength);
 	RF_CSN = 1;
-	return ;
+	return response;
 }
 
 BYTE WriteRegister(BYTE reg, BYTE byte)
@@ -114,6 +115,5 @@ BYTE ReadRegister(BYTE reg)
 		return (0);
 
 	command = R_REGISTER + reg;
-	OutCommand(command);
-	return InByte();
+	return OutCommand_(command,0xFF);
 }

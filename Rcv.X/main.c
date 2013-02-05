@@ -18,6 +18,8 @@ void RangeTestRx(void);
 void intToCharArray(int num, char array[]);
 void ModeSelectInit(void);
 void RangeTestTx(void);
+void ShockBurstRxTest(void);
+void ShockBurstTxTest(void);
 
 void main(void)
 {
@@ -25,7 +27,11 @@ void main(void)
 	RfPicInit();
 
 	if (PORTCbits.RC0)
+	{
 		RangeTestRx();
+		//ShockBurstRxTest();
+	}
+	//ShockBurstTxTest();
 	RangeTestTx();
 }
 
@@ -34,7 +40,6 @@ void RangeTestTx(void)
 	int count;
 	BYTE testData = 0x01;
 	XmitInit();
-
 	while (1)
 	{
 		for(count=0;count<200;count++); //Pause to let receiver 'cath-up'
@@ -67,7 +72,7 @@ void RangeTestRx(void)
     {
         while (RecvPacket(&data) == 0)
         {
-            if (missCount++ >= 300000)
+            if (missCount++ >= 100000)
             {
 				LcdBusy(LCD_RS_CNTL, 0x01);
 				LcdText(0,0,lostRf);
@@ -92,6 +97,61 @@ void RangeTestRx(void)
 		sum = 0;
         count = 0;                          //reset
     }
+
+}
+
+void ShockBurstRxTest(void)
+{
+	BYTE data[32];
+    int count = 0;
+
+    long missCount = 0;
+    char countString[8] = "       ";
+
+    char lostRf[8] = "Lost RF";
+
+	LcdInit();
+	RfShockBurstRxInit();
+	LcdText(0,0,lostRf);
+	while(1)
+	{
+		while (RecvPacket2(data) == 0);
+
+		//if 100 bytes indicator received, 0xFF, isn't received continue
+		if (data[0] != 0xFF)
+		{
+			count++;
+			continue;
+		}
+
+		//turn the count into characters for display
+		intToCharArray(count, countString);
+		LcdBusy(LCD_RS_CNTL, 0x01);         //clear lcd screen
+		LcdText(0,0, countString);          //display the count
+		LcdText(0x40,0, data);				//display the sum
+		count = 0;
+	}
+}
+
+void ShockBurstTxTest(void)
+{
+	BYTE testData[6] = "HELLO";
+	int count;
+	int testCount = 0;
+	BYTE termination = 0xFF;
+
+	RfShockBurstTxInit();
+
+
+	while (1)
+	{
+		for(testCount = 0; testCount < 100; testCount++)
+		{
+			for(count=0;count<500;count++); //Pause to let receiver 'cath-up'
+			XmitPacket2(testData, 6);		//Send the test BYTE and increment it
+		}
+		XmitPacket2(&termination, 1);		//send indicator 0xFF
+	}
 
 }
 
