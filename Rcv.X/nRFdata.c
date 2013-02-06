@@ -24,7 +24,7 @@ void InData(BYTE data[], BYTE length)
 /*OutByte(data): copy one byte of daya to the rf module*/
 BYTE OutByte(BYTE byte)
 {
-   BYTE ofst, status=0;
+   BYTE ofst, status;
 
    /* clock out the data from msb to lsb */
    for (ofst=0; ofst<8; ofst++)

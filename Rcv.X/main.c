@@ -28,11 +28,11 @@ void main(void)
 
 	if (PORTCbits.RC0)
 	{
-		RangeTestRx();
-		//ShockBurstRxTest();
+		//RangeTestRx();
+		ShockBurstRxTest();
 	}
-	//ShockBurstTxTest();
-	RangeTestTx();
+	ShockBurstTxTest();
+	//RangeTestTx();
 }
 
 void RangeTestTx(void)

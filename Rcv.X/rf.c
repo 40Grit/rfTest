@@ -28,7 +28,7 @@ void RfShockBurstRxInit(void)
 	/* data rate = 1 MB, 0dBM */
 	WriteRegister(RF_SETUP, 0x07);
 	/* channel 2 */
-	WriteRegister(RF_CH, 0x02);
+	WriteRegister(RF_CH, 0x12);
 	
 	WriteRegister(EN_AA, EN_AA_P0_ON);		//Enable Auto Acknowledge
 	
@@ -44,19 +44,24 @@ void RfShockBurstRxInit(void)
 
 	WriteRegister(CONFIG, 0x0B);
 	RF_CE = 1;
+
 }
 
 void RfShockBurstTxInit(void)
 {
 	BYTE addr[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
-	BYTE temp = 0xFF;
+	BYTE temp = 0x80;
 	RF_CE = 0;
 	RF_CSN = 1;
 	RF_SCK = 0;
-	nop();
+	pause(5);
 
-	WriteRegister(CONFIG, CONFIG_SHOCK_BURST_TX);
-
+	WriteRegister(CONFIG, 0x09);
+	WriteRegister(CONFIG, 0x09);
+	WriteRegister(CONFIG, 0x09);
+	WriteRegister(CONFIG, 0x09);
+	WriteRegister(CONFIG, 0x09);
+	WriteRegister(CONFIG, 0x09);
 	//Enable Auto Acknowledge pipe 0
 	WriteRegister(EN_AA, 0x01);
 	temp = ReadRegister(CONFIG);
@@ -67,7 +72,7 @@ void RfShockBurstTxInit(void)
 	WriteRegister(SETUP_AW,0x03);
 	
 	//Set retransmit # and time
-	WriteRegister(SETUP_RETR, 0x0F);
+	WriteRegister(SETUP_RETR, 0x1F);
 
 	/* channel 2 */
 	WriteRegister(RF_CH, 0x02);
@@ -141,6 +146,7 @@ void RecvInit(void)
    WriteRegister(CONFIG, 0x3B);
 
    RF_CE = 1;
+   pause(5);
 }
 
 /*XmitPacket: send a data byte/block to the rf module*/
@@ -203,7 +209,7 @@ BYTE RecvPacket(BYTE *data)
 	WriteRegister(STATUS, STATUS_RX_DR); /*reset intrupts*/
 
 	RF_CE = 1;
-	
+	pause(5);
 	return(1);
 }
 
@@ -252,10 +258,13 @@ void PulseCe(void)
 void pause(BYTE max)
 {
    BYTE ofst;
-
-   /* this delays for .5 msec */
-   for (ofst=0; ofst<97; ofst++)
-      nop();
+   BYTE count;
+   for(count = 0; count < max; count++)
+   {
+	   /* this delays for .5 msec */
+	   for (ofst=0; ofst<97; ofst++)
+		  nop();
+   }
 }
 
 void nop(void)
