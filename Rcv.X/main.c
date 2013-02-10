@@ -28,11 +28,11 @@ void main(void)
 
 	if (PORTCbits.RC0)
 	{
-		RangeTestRx();
-		//ShockBurstRxTest();
+		//RangeTestRx();
+		ShockBurstRxTest();
 	}
-	//ShockBurstTxTest();
-	RangeTestTx();
+	ShockBurstTxTest();
+	//RangeTestTx();
 }
 
 void RangeTestTx(void)
@@ -103,11 +103,8 @@ void RangeTestRx(void)
 void ShockBurstRxTest(void)
 {
 	BYTE data[32];
-    int count = 0;
-    long missCount = 0;
-    char countString[8] = "       ";
     char lostRf[8] = "Lost RF";
-	BYTE addr[] = "E7E7E7E7E7";
+	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
 
 	LcdInit();
 	RfShockBurstInit(addr, MODE_RX);
@@ -115,43 +112,21 @@ void ShockBurstRxTest(void)
 
 	while(1)
 	{
-		while (RecvPacket2(data) == 0);
-
-		//if 100 bytes indicator received, 0xFF, isn't received continue
-		if (data[0] != 0xFF)
-		{
-			count++;
-			continue;
-		}
-
-		//turn the count into characters for display
-		intToCharArray(count, countString);
-		LcdBusy(LCD_RS_CNTL, 0x01);         //clear lcd screen
-		LcdText(0,0, countString);          //display the count
-		LcdText(0x40,0, data);				//display the sum
-		count = 0;
+		while (RecvPacket2(data));
+		LcdText(0,0, data);
 	}
 }
 
 void ShockBurstTxTest(void)
 {
-	BYTE testData[6] = "HELLO";
-	int count;
-	int testCount = 0;
-	BYTE termination = 0xFF;
-	BYTE addr[] = "E7E7E7E7E7";
+	BYTE testData[32] = "dddAAAAAAA\0";
+	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
 	RfShockBurstInit(addr, MODE_TX);
-
 	while (1)
 	{
-		for(testCount = 0; testCount < 100; testCount++)
-		{
-			for(count=0;count<500;count++); //Pause to let receiver 'cath-up'
-			XmitPacket2(testData, 31);		//Send the test BYTE and increment it
-		}
-		XmitPacket2(&termination, 1);		//send indicator 0xFF
+		pause(10);
+		XmitPacket2(testData, 32);		//Send the test BYTE and increment it
 	}
-
 }
 
 void intToCharArray(int num, char array[8])

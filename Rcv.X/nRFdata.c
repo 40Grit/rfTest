@@ -20,11 +20,19 @@ void InData(BYTE data[], BYTE length)
 	for (count = 0; count < length; count++)
 		data[count] = InByte();
 }
+void ReadRxPayload(BYTE data[], BYTE length)
+{
+	RF_CSN = 0;
+	OutByte(R_RX_PAYLOAD);
+	InData(data, length);
+	RF_CSN = 1;
+}
 
 /*OutByte(data): copy one byte of daya to the rf module*/
 BYTE OutByte(BYTE byte)
 {
-   BYTE ofst, status;
+	BYTE ofst;
+	BYTE dataIn = 0;
 
    /* clock out the data from msb to lsb */
    for (ofst=0; ofst<8; ofst++)
@@ -36,19 +44,21 @@ BYTE OutByte(BYTE byte)
 
       /* while the data is clocked out, the chip returns its status */
       RF_SCK = 1;
-      status <<= 1;
-      status |= RF_MISO;
+      dataIn <<= 1;
+      dataIn |= RF_MISO;
       RF_SCK = 0;
 
       byte <<= 1;
    }
 
-   return(status);
+   return(dataIn);
 }
-BYTE* OutData(BYTE data[], BYTE length)
+
+/*FIXME: PROBABLY RETURNS A POINTER TO A RANDOM LOCATION*/
+BYTE* OutData(BYTE *data, BYTE length)
 {
-	int index = 0;
-	BYTE response[];
+	BYTE index = 0;
+	BYTE *response;
 	
 	for(index = 0; index < length; index++)
 	{
@@ -59,12 +69,13 @@ BYTE* OutData(BYTE data[], BYTE length)
 }
 BYTE OutCommand(BYTE command)
 {
-	BYTE status;
+	BYTE dataIn;
 	RF_CSN = 0;
-	status = OutByte(command);
+	dataIn = OutByte(command);
 	RF_CSN = 1;
-	return status;
+	return dataIn;
 }
+
 BYTE OutCommandByte(BYTE command, BYTE byte)
 {
 	BYTE response;
@@ -74,7 +85,8 @@ BYTE OutCommandByte(BYTE command, BYTE byte)
 	RF_CSN = 1;
 	return response;
 }
-BYTE* OutCommandData(BYTE command, BYTE data[], BYTE dataLength)
+
+BYTE* OutCommandData(BYTE command, BYTE *data, BYTE dataLength)
 {
 	BYTE *response;
 	RF_CSN = 0;

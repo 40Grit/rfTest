@@ -118,3 +118,4 @@ BYTE  InByte(void);
 void InData(BYTE data[], BYTE length);
 void PulseCe(void);
 void RfConfigure(BYTE bitNum, BYTE enable);
+void ReadRxPayload(BYTE data[], BYTE length);

@@ -14,6 +14,7 @@ void RfPicInit(void)
 
 void RfShockBurstInit(BYTE address[], BYTE mode)
 {
+	BYTE temp;
 	RF_CE = 0;
 	RF_CSN = 1;
 	RF_SCK = 0;
@@ -29,14 +30,14 @@ void RfShockBurstInit(BYTE address[], BYTE mode)
 	//CONFIG:16 bit crc
 	RfConfigure(CRCO,1);
 	//auto retransmit 	//15 tranmist with 500us
-	WriteRegister(SETUP_RETR, 0x0F);
+	WriteRegister(SETUP_RETR, 0x1F);
 
 	//Set 5 byte address width
 	WriteRegister(SETUP_AW,0x03);
 	//set tx address
-	WriteAdrRegister(TX_ADDR, address, 5);
+	//WriteAdrRegister(TX_ADDR, address, 5);
 	//set pipe 0 address
-	WriteAdrRegister(RX_ADDR_P0, address, 5);
+	//WriteAdrRegister(RX_ADDR_P0, address, 5);
 	//set mode
 	if(mode == MODE_TX)
 		RfConfigure(PRIM_RX,0);
@@ -44,6 +45,7 @@ void RfShockBurstInit(BYTE address[], BYTE mode)
 	{
 		RfConfigure(PRIM_RX,1);
 		WriteRegister(RX_PW_P0, 32);
+		RF_CE = 1;
 	}
 
 	//Set rf channel
@@ -53,7 +55,7 @@ void RfShockBurstInit(BYTE address[], BYTE mode)
 	//start a timer
 	pause(5);
 	//wait for timer
-
+	temp = ReadRegister(RX_PW_P0);
 	/*FIXME: Implement state*/
 	//set state
 
@@ -69,7 +71,8 @@ void XmitInit(void)
 	RF_SCK = 0;
 	nop();
 
-   /* select transmit, mask out interrupts */
+	WriteRegister(CONFIG, 0x00);
+	/* select transmit, mask out interrupts */
    WriteRegister(CONFIG, 0x38);
    /* disable auto retransmit */
    WriteRegister(SETUP_RETR,0x00);
@@ -113,9 +116,8 @@ void RecvInit(void)
    /* set address E7E7E7E7E7 */
    WriteAdrRegister(TX_ADDR, address, 5);
    /* PWR_UP = 1 */
-   WriteRegister(CONFIG, 0x3B);
-
    RfConfigure(PWR_UP, 1);
+   RF_CE = 1;
    pause(5);
 }
 
@@ -127,8 +129,9 @@ void XmitPacket(BYTE data)
 	/* clear previous intrupts */
 	WriteRegister(STATUS,(STATUS_MAX_RT + STATUS_RX_DR + STATUS_TX_DS));
 
-	WriteRegister(CONFIG, 0x3A); /* PWR_UP = 1, interrupts masked, transmit mode */
-
+	//WriteRegister(CONFIG,0x3A);
+	RfConfigure(PWR_UP,1); /*Power up radio*/
+	pause(5);
 	OutCommand(FLUSH_TX);
 
 	OutCommandByte(W_TX_PAYLOAD, data);
@@ -159,18 +162,23 @@ BYTE RecvPacket(BYTE *data)
 BYTE XmitPacket2(BYTE *data, BYTE length)
 {
 	RF_CE = 0;
+	
 	//early return if packet length is too long
 	if (length>32)
 		return 1;
+	WriteRegister(STATUS, (STATUS_TX_DS | STATUS_RX_DR | STATUS_MAX_RT));
 	//load tx fifo
-	OutCommandData(W_TX_PAYLOAD, data, length);
+	OutCommandData(W_TX_PAYLOAD, data, 32);
 	//send packet
 	PulseCe();
 
 	while(1)
 	{
 		if(CheckInterrupt(STATUS_MAX_RT))
+		{
+			OutCommand(FLUSH_TX);
 			return 2;
+		}
 		if(CheckInterrupt(STATUS_TX_DS))
 			return 0;
 	}
@@ -184,35 +192,36 @@ BYTE RecvPacket2(BYTE *payload)
    /* make sure data is present */
    if (!CheckInterrupt(STATUS_RX_DR))
 	   return(1);
-
+   RF_CE = 0;
+   
    /* read RX payload, which is 'length' bytes long*/
-   payload = OutCommandData(R_RX_PAYLOAD, payload, 32);
+   ReadRxPayload(payload, 32);
 
    OutCommand(FLUSH_RX);				/* Flush RX FIFO */
 
    WriteRegister(STATUS, STATUS_RX_DR); /* reset interrupt */
-
+   RF_CE = 1;
    return(0);
 }
 
 //Write individual bits of the configure register
 void RfConfigure(BYTE bitNum, BYTE enable)
 {
-	BYTE status;
-	status = OutCommand(nop);
+	BYTE config = 0;
+	config = ReadRegister(CONFIG);
 	if (enable)
-		status |=  bitNum;
+		config |=  1<<bitNum;
 	else
-		status &= ~bitNum;
-	WriteRegister(CONFIG, status);
+		config &= ~(1<<bitNum);
+	WriteRegister(CONFIG, config);
 }
 
 BYTE CheckInterrupt(BYTE intrupt)
 {
 	BYTE status;
-	if (RF_IRQ)
-		return 0;
-	status = OutCommand(NOP);
+	//if (RF_IRQ)
+	//	return 0;
+	status = OutCommand(NOP) & 0xF0 ;
 	return (intrupt & status) ? (1):(0);
 }
 
