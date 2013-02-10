@@ -14,7 +14,6 @@ void RfPicInit(void)
 
 void RfShockBurstInit(BYTE address[], BYTE mode)
 {
-	BYTE temp;
 	RF_CE = 0;
 	RF_CSN = 1;
 	RF_SCK = 0;
@@ -57,13 +56,12 @@ void RfShockBurstInit(BYTE address[], BYTE mode)
 
 	/*FIXME: Implement state*/
 	//set state
-	temp = ReadRegister(CONFIG);
+
 }
 
 /*XmitInit: Initialize the rf circuit for transmitting*/
 void XmitInit(void)
 {
-	BYTE temp = 0;
 	BYTE address[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
 
 	RF_CE = 0;
@@ -88,7 +86,7 @@ void XmitInit(void)
 
    /* disable auto retransmit*/
    WriteRegister(EN_AA, 0x00);
-   temp = ReadRegister(CONFIG);
+
 }
 
 /*RecvInit: Initialize the rf circuit for receiving*/
@@ -117,7 +115,7 @@ void RecvInit(void)
    /* PWR_UP = 1 */
    WriteRegister(CONFIG, 0x3B);
 
-   RF_CE = 1;
+   RfConfigure(PWR_UP, 1);
    pause(5);
 }
 
