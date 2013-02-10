@@ -26,13 +26,9 @@ void main(void)
 	ModeSelectInit();
 	RfPicInit();
 
-	if (PORTCbits.RC0)
-	{
-		//RangeTestRx();
-		ShockBurstRxTest();
-	}
-	ShockBurstTxTest();
-	//RangeTestTx();
+	/*if input RC0 is high, run reciever test else run transmiter test*/
+	PORTCbits.RC0 ? (ShockBurstRxTest()):(ShockBurstTxTest());
+	//PORTCbits.RC0 ? (RangeTestRx()):(RangeTestTx());
 }
 
 void RangeTestTx(void)
@@ -102,14 +98,19 @@ void RangeTestRx(void)
 
 void ShockBurstRxTest(void)
 {
-	BYTE data[32];
-    char lostRf[8] = "Lost RF";
+	char initialText[12] = "InitialText";
 	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
-
+	BYTE data[32];
+   
+	/*Initialize LCD screen*/
 	LcdInit();
+	/*Initialize nRF24l01+ for enhance shockburst in recieve mode */
 	RfShockBurstInit(addr, MODE_RX);
-	LcdText(0,0,lostRf);
+	/*write iniital text to lcd*/
+	LcdText(0,0,initialText);
 
+	/*block while no data has been received*/
+	/*print data to lcd screen when received*/
 	while(1)
 	{
 		while (RecvPacket2(data));
@@ -119,16 +120,20 @@ void ShockBurstRxTest(void)
 
 void ShockBurstTxTest(void)
 {
-	BYTE testData[32] = "dddAAAAAAA\0";
+	BYTE testData[32] = "ShockBurst \0";
 	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
+	/*Initialize nRF24l01+ for enhance shockburst in transmit mode */
 	RfShockBurstInit(addr, MODE_TX);
+
+	/*Constantly send the test string*/
 	while (1)
 	{
 		pause(10);
 		XmitPacket2(testData, 32);		//Send the test BYTE and increment it
 	}
 }
-
+/*Determines the string representation
+ of an int input and places in character string*/
 void intToCharArray(int num, char array[8])
 {
     char digit = num;
@@ -171,6 +176,7 @@ void oneByteTest(void)
    }
 }
 
+/*initializes a bit on port c as input*/
 void ModeSelectInit(void)
 {
 	TRISCbits.RC0 = 1;

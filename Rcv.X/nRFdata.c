@@ -1,32 +1,7 @@
 #include "rf.h"
+/*Contains basic functions to transfer
+ *data between micro and nRF24L01+*/
 
-BYTE InByte(void)
-{
-	BYTE ofst, data=0;
-
-	/* clock in the data from msb to lsb */
-	for (ofst=0; ofst<8; ofst++)
-	{
-		RF_SCK = 1;
-		data <<= 1;
-		data |= RF_MISO;
-		RF_SCK = 0;
-   }
-	return data;
-}
-void InData(BYTE data[], BYTE length)
-{
-	BYTE count;
-	for (count = 0; count < length; count++)
-		data[count] = InByte();
-}
-void ReadRxPayload(BYTE data[], BYTE length)
-{
-	RF_CSN = 0;
-	OutByte(R_RX_PAYLOAD);
-	InData(data, length);
-	RF_CSN = 1;
-}
 
 /*OutByte(data): copy one byte of daya to the rf module*/
 BYTE OutByte(BYTE byte)
@@ -128,4 +103,32 @@ BYTE ReadRegister(BYTE reg)
 
 	command = R_REGISTER + reg;
 	return OutCommandByte(command,0xFF);
+}
+
+BYTE InByte(void)
+{
+	BYTE ofst, data=0;
+
+	/* clock in the data from msb to lsb */
+	for (ofst=0; ofst<8; ofst++)
+	{
+		RF_SCK = 1;
+		data <<= 1;
+		data |= RF_MISO;
+		RF_SCK = 0;
+   }
+	return data;
+}
+void InData(BYTE data[], BYTE length)
+{
+	BYTE count;
+	for (count = 0; count < length; count++)
+		data[count] = InByte();
+}
+void ReadRxPayload(BYTE data[], BYTE length)
+{
+	RF_CSN = 0;
+	OutByte(R_RX_PAYLOAD);
+	InData(data, length);
+	RF_CSN = 1;
 }
