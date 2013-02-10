@@ -12,87 +12,58 @@ void RfPicInit(void)
    CMCON = 0x07;              //disable comparator for relevent pins
 }
 
-void RfShockBurstRxInit(void)
+void RfShockBurstInit(BYTE address[], BYTE mode)
 {
-	BYTE addr[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
-
+	BYTE temp;
 	RF_CE = 0;
 	RF_CSN = 1;
 	RF_SCK = 0;
 	nop();
-
-	WriteRegister(CONFIG, CONFIG_SHOCK_BURST_RX);
-
-	/* address width = 5 bytes */
-	WriteRegister(SETUP_AW,0x03);
-	/* data rate = 1 MB, 0dBM */
-	WriteRegister(RF_SETUP, 0x07);
-	/* channel 2 */
-	WriteRegister(RF_CH, 0x12);
 	
-	WriteRegister(EN_AA, EN_AA_P0_ON);		//Enable Auto Acknowledge
-	
-	WriteRegister(SETUP_RETR, 0x0F);		//Set retransmit # and time
-
-	OutCommand_(ACTIVATE, 0x73);			//Activate Extra Features
-
-	WriteRegister(FEATURE, 0x04);			//Enable Dynamic payload feature
-	WriteRegister(DYNPD, 0x01);				//Enable Dynamic payload on pipe 0
-
-	WriteAdrRegister(RX_ADDR_P0, addr, 5);	//Set Rx address
-	WriteAdrRegister(TX_ADDR, addr, 5);		//Set Tx address
-
-	WriteRegister(CONFIG, 0x0B);
-	RF_CE = 1;
-
-}
-
-void RfShockBurstTxInit(void)
-{
-	BYTE addr[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
-	BYTE temp = 0x80;
-	RF_CE = 0;
-	RF_CSN = 1;
-	RF_SCK = 0;
-	pause(5);
-
-	WriteRegister(CONFIG, 0x09);
-	WriteRegister(CONFIG, 0x09);
-	WriteRegister(CONFIG, 0x09);
-	WriteRegister(CONFIG, 0x09);
-	WriteRegister(CONFIG, 0x09);
-	WriteRegister(CONFIG, 0x09);
-	//Enable Auto Acknowledge pipe 0
-	WriteRegister(EN_AA, 0x01);
-	temp = ReadRegister(CONFIG);
-	//Enable RX address pipe 0
+	//Close Pipes
+	WriteRegister(EN_RXADDR,0x00);
+	WriteRegister(EN_AA, 0x00);
+	//Open Pipe 0
 	WriteRegister(EN_RXADDR, 0x01);
+	//Pipe 0 autoack
+	WriteRegister(EN_AA, 0x01);
+	//CONFIG:16 bit crc
+	RfConfigure(CRCO,1);
+	//auto retransmit 	//15 tranmist with 500us
+	WriteRegister(SETUP_RETR, 0x0F);
 
-	/* address width = 5 bytes */
+	//Set 5 byte address width
 	WriteRegister(SETUP_AW,0x03);
-	
-	//Set retransmit # and time
-	WriteRegister(SETUP_RETR, 0x1F);
+	//set tx address
+	WriteAdrRegister(TX_ADDR, address, 5);
+	//set pipe 0 address
+	WriteAdrRegister(RX_ADDR_P0, address, 5);
+	//set mode
+	if(mode == MODE_TX)
+		RfConfigure(PRIM_RX,0);
+	else
+	{
+		RfConfigure(PRIM_RX,1);
+		WriteRegister(RX_PW_P0, 32);
+	}
 
-	/* channel 2 */
-	WriteRegister(RF_CH, 0x02);
+	//Set rf channel
+	WriteRegister(RF_CH, 0x12);
+	//turn on power
+	RfConfigure(PWR_UP,1);
+	//start a timer
+	pause(5);
+	//wait for timer
 
-	/* data rate = 1 MB, 0dBM */
-	WriteRegister(RF_SETUP, 0x06);
-
-	WriteAdrRegister(RX_ADDR_P0, addr, 5);	//Set Rx address
-	WriteAdrRegister(TX_ADDR, addr, 5);		//Set Tx address
-
-	OutCommand_(ACTIVATE, 0x73);			//Activate Extra Features
-	WriteRegister(FEATURE, 0x04);			//Enable Dynamic payload feature
-	temp = ReadRegister(FEATURE);
-	WriteRegister(DYNPD, 0x01);				//Enable Dynamic payload on pipe 0
-	
+	/*FIXME: Implement state*/
+	//set state
+	temp = ReadRegister(CONFIG);
 }
 
 /*XmitInit: Initialize the rf circuit for transmitting*/
 void XmitInit(void)
 {
+	BYTE temp = 0;
 	BYTE address[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
 
 	RF_CE = 0;
@@ -117,6 +88,7 @@ void XmitInit(void)
 
    /* disable auto retransmit*/
    WriteRegister(EN_AA, 0x00);
+   temp = ReadRegister(CONFIG);
 }
 
 /*RecvInit: Initialize the rf circuit for receiving*/
@@ -161,86 +133,87 @@ void XmitPacket(BYTE data)
 
 	OutCommand(FLUSH_TX);
 
-	OutCommand_(W_TX_PAYLOAD, data);
+	OutCommandByte(W_TX_PAYLOAD, data);
 
 	PulseCe(); /*Pulse Chip Enable to do RF*/
-}
-
-/*XmitPacket: send a data byte/block to the rf module*/
-BYTE XmitPacket2(BYTE data[], BYTE length)
-{
-	RF_CE = 0;
-	WriteRegister(CONFIG, 0x0A);
-	nop();
-	/* clear previous ints */
-	WriteRegister(STATUS,(STATUS_MAX_RT + STATUS_RX_DR + STATUS_TX_DS));
-	/* clear TX fifo */
-	OutCommand(FLUSH_TX);			
-
-	/* (payload) data to be sent (can send additional bytes) */
-	OutCommand__(W_TX_PAYLOAD, data, length);
-
-	PulseCe();
-
-	while(1)
-	{
-		if (CheckInterrupt(STATUS_MAX_RT))
-		{
-			OutCommand(FLUSH_TX);
-			return 0;
-		}
-		if (CheckInterrupt(STATUS_TX_DS))
-			return 1;
-	}
 }
 
 /*RecvPacket: check/receive an packet from the rf module*/
 BYTE RecvPacket(BYTE *data)
 {
-   /* make sure data is present */
+	/* make sure data is present */
 	if (!CheckInterrupt(STATUS_RX_DR))
-		return(0);
+		return (0);
 
 	RF_CE = 0;
 	/* read RX payload (repeat for as many incoming bytes) */
-	*data = OutCommand_(R_RX_PAYLOAD, 0xFF);
+	*data = OutCommandByte(R_RX_PAYLOAD, 0xFF);
 
 	OutCommand(FLUSH_RX);
 	WriteRegister(STATUS, STATUS_RX_DR); /*reset intrupts*/
 
 	RF_CE = 1;
 	pause(5);
-	return(1);
+	return (1);
+}
+
+/*XmitPacket: send a data byte/block to the rf module*/
+BYTE XmitPacket2(BYTE *data, BYTE length)
+{
+	RF_CE = 0;
+	//early return if packet length is too long
+	if (length>32)
+		return 1;
+	//load tx fifo
+	OutCommandData(W_TX_PAYLOAD, data, length);
+	//send packet
+	PulseCe();
+
+	while(1)
+	{
+		if(CheckInterrupt(STATUS_MAX_RT))
+			return 2;
+		if(CheckInterrupt(STATUS_TX_DS))
+			return 0;
+	}
+	/*FIXME:implement state*/
+	//set state
 }
 
 /*RecvPacket: check/receive an packet from the rf module*/
 BYTE RecvPacket2(BYTE *payload)
 {
-   BYTE length = 0;
-
    /* make sure data is present */
-   if(RF_IRQ)
-	   return(0);
    if (!CheckInterrupt(STATUS_RX_DR))
-	   return(0);
-
-   /*get length of packet*/
-   //TODO: figure out when length is returned
-   length = OutCommand_(R_RX_PL_WID, 0xFF);
+	   return(1);
 
    /* read RX payload, which is 'length' bytes long*/
-   payload = OutCommand__(R_RX_PAYLOAD, payload, length);
+   payload = OutCommandData(R_RX_PAYLOAD, payload, 32);
 
    OutCommand(FLUSH_RX);				/* Flush RX FIFO */
 
    WriteRegister(STATUS, STATUS_RX_DR); /* reset interrupt */
 
-   return(length);
+   return(0);
+}
+
+//Write individual bits of the configure register
+void RfConfigure(BYTE bitNum, BYTE enable)
+{
+	BYTE status;
+	status = OutCommand(nop);
+	if (enable)
+		status |=  bitNum;
+	else
+		status &= ~bitNum;
+	WriteRegister(CONFIG, status);
 }
 
 BYTE CheckInterrupt(BYTE intrupt)
 {
 	BYTE status;
+	if (RF_IRQ)
+		return 0;
 	status = OutCommand(NOP);
 	return (intrupt & status) ? (1):(0);
 }

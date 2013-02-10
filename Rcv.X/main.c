@@ -28,11 +28,11 @@ void main(void)
 
 	if (PORTCbits.RC0)
 	{
-		//RangeTestRx();
-		ShockBurstRxTest();
+		RangeTestRx();
+		//ShockBurstRxTest();
 	}
-	ShockBurstTxTest();
-	//RangeTestTx();
+	//ShockBurstTxTest();
+	RangeTestTx();
 }
 
 void RangeTestTx(void)
@@ -42,7 +42,7 @@ void RangeTestTx(void)
 	XmitInit();
 	while (1)
 	{
-		for(count=0;count<200;count++); //Pause to let receiver 'cath-up'
+		for(count=0;count<200;count++);  //Pause to let receiver 'cath-up'
 	
 		XmitPacket(testData++);			 //Send the test BYTE and increment it
 		
@@ -104,15 +104,15 @@ void ShockBurstRxTest(void)
 {
 	BYTE data[32];
     int count = 0;
-
     long missCount = 0;
     char countString[8] = "       ";
-
     char lostRf[8] = "Lost RF";
+	BYTE addr[] = "E7E7E7E7E7";
 
 	LcdInit();
-	RfShockBurstRxInit();
+	RfShockBurstInit(addr, MODE_RX);
 	LcdText(0,0,lostRf);
+
 	while(1)
 	{
 		while (RecvPacket2(data) == 0);
@@ -139,16 +139,15 @@ void ShockBurstTxTest(void)
 	int count;
 	int testCount = 0;
 	BYTE termination = 0xFF;
-
-	RfShockBurstTxInit();
-
+	BYTE addr[] = "E7E7E7E7E7";
+	RfShockBurstInit(addr, MODE_TX);
 
 	while (1)
 	{
 		for(testCount = 0; testCount < 100; testCount++)
 		{
 			for(count=0;count<500;count++); //Pause to let receiver 'cath-up'
-			XmitPacket2(testData, 6);		//Send the test BYTE and increment it
+			XmitPacket2(testData, 31);		//Send the test BYTE and increment it
 		}
 		XmitPacket2(&termination, 1);		//send indicator 0xFF
 	}

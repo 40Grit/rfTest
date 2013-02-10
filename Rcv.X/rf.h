@@ -40,9 +40,17 @@
 
 //Register addresses
 #define CONFIG              0x00
-    //No IRQ mask, 1 byte crc, power on, PTX
-    #define CONFIG_SHOCK_BURST_TX 0b00001000
-    #define CONFIG_SHOCK_BURST_RX 0b00001001
+    #define MASK_RX_DR      6
+    #define MASK_TX_DS      5
+    #define MASK_MAX_RT     4
+    #define EN_CRC          3
+    #define CRCO            2
+    #define PWR_UP          1
+    #define PRIM_RX         0
+        #define MODE_TX         0
+        #define MODE_RX         1
+
+    #define CONFIG_ENHANCED_SHOCKBURST 0b00001100
 #define EN_AA               0x01
     #define EN_AA_P0_ON 0b00000001
 #define EN_RXADDR           0x02
@@ -84,8 +92,7 @@
 void RfPicInit(void);
 void XmitInit(void);
 void RecvInit(void);
-void RfShockBurstTxInit(void);
-void RfShockBurstRxInit(void);
+void RfShockBurstInit(BYTE address[], BYTE mode);
 
 void XmitPacket(BYTE data);
 BYTE RecvPacket(BYTE *data);
@@ -94,19 +101,20 @@ void pause(BYTE max);
 BYTE calc(BYTE ofst, BYTE chan);
 void nop(void);
 
-BYTE XmitPacket2(BYTE data[], BYTE length);
+BYTE XmitPacket2(BYTE *data, BYTE length);
 BYTE RecvPacket2(BYTE *payload);
 
 
 /*Data Operation Prototypes*/
-BYTE OutByte(BYTE data);
+BYTE  OutByte(BYTE data);
 BYTE* OutData(BYTE data[], BYTE length);
-BYTE OutCommand(BYTE command);
-BYTE OutCommand_(BYTE command, BYTE byte);
-BYTE* OutCommand__(BYTE command, BYTE data[], BYTE dataLength);
-BYTE WriteRegister(BYTE reg, BYTE byte);
+BYTE  OutCommand(BYTE command);
+BYTE  OutCommandByte(BYTE command, BYTE byte);
+BYTE* OutCommandData(BYTE command, BYTE data[], BYTE dataLength);
+BYTE  WriteRegister(BYTE reg, BYTE byte);
 BYTE* WriteAdrRegister(BYTE reg, BYTE data[], BYTE length);
-BYTE ReadRegister(BYTE reg);
-BYTE InByte(void);
+BYTE  ReadRegister(BYTE reg);
+BYTE  InByte(void);
 void InData(BYTE data[], BYTE length);
 void PulseCe(void);
+void RfConfigure(BYTE bitNum, BYTE enable);

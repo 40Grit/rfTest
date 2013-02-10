@@ -65,7 +65,7 @@ BYTE OutCommand(BYTE command)
 	RF_CSN = 1;
 	return status;
 }
-BYTE OutCommand_(BYTE command, BYTE byte)
+BYTE OutCommandByte(BYTE command, BYTE byte)
 {
 	BYTE response;
 	RF_CSN = 0;
@@ -74,7 +74,7 @@ BYTE OutCommand_(BYTE command, BYTE byte)
 	RF_CSN = 1;
 	return response;
 }
-BYTE* OutCommand__(BYTE command, BYTE data[], BYTE dataLength)
+BYTE* OutCommandData(BYTE command, BYTE data[], BYTE dataLength)
 {
 	BYTE *response;
 	RF_CSN = 0;
@@ -93,7 +93,7 @@ BYTE WriteRegister(BYTE reg, BYTE byte)
 		return (0);
 
 	command = W_REGISTER + reg;
-	return OutCommand_(command, byte);
+	return OutCommandByte(command, byte);
 }
 BYTE* WriteAdrRegister(BYTE reg, BYTE data[], BYTE length)
 {
@@ -103,7 +103,7 @@ BYTE* WriteAdrRegister(BYTE reg, BYTE data[], BYTE length)
 
 	//Create command to write given register, send command
 	command = W_REGISTER + reg;
-	return OutCommand__(command, data, length);
+	return OutCommandData(command, data, length);
 }
 
 BYTE ReadRegister(BYTE reg)
@@ -115,5 +115,5 @@ BYTE ReadRegister(BYTE reg)
 		return (0);
 
 	command = R_REGISTER + reg;
-	return OutCommand_(command,0xFF);
+	return OutCommandByte(command,0xFF);
 }
