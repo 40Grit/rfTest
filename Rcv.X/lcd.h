@@ -32,3 +32,4 @@ void LcdText(BYTE row, BYTE col, char *textp);
 void LcdConst(BYTE row, BYTE col, const char *textp);
 void LcdWrite(BYTE reg, BYTE data);
 void LcdBusy(BYTE reg, BYTE data);
+void LcdClear(void);

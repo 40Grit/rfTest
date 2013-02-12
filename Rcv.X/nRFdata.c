@@ -3,8 +3,9 @@
  *data between micro and nRF24L01+*/
 
 
-/*OutByte(data): copy one byte of daya to the rf module*/
-BYTE OutByte(BYTE byte)
+/*OutByte(data): byte is clocked out to the RF module,
+ *while dataIn is clocked in and returned */
+BYTE OutInByte(BYTE byte)
 {
 	BYTE ofst;
 	BYTE dataIn = 0;
@@ -17,7 +18,7 @@ BYTE OutByte(BYTE byte)
       else
          RF_MOSI = 0;
 
-      /* while the data is clocked out, the chip returns its status */
+      /* while the data is clocked out, the chip returns data*/
       RF_SCK = 1;
       dataIn <<= 1;
       dataIn |= RF_MISO;
@@ -25,74 +26,74 @@ BYTE OutByte(BYTE byte)
 
       byte <<= 1;
    }
-
    return(dataIn);
 }
-
-/*FIXME: PROBABLY RETURNS A POINTER TO A RANDOM LOCATION*/
-BYTE* OutData(BYTE *data, BYTE length)
+void InData(BYTE data[], BYTE length)
+{
+	BYTE count;
+	for (count = 0; count < length; count++)
+		data[count] = OutInByte(0xFF);
+}
+void OutData(BYTE *data, BYTE length)
 {
 	BYTE index = 0;
-	BYTE *response;
-	
 	for(index = 0; index < length; index++)
 	{
-		response[index] = OutByte(data[index]);
+		OutInByte(data[index]);
 	}
-
-	return response;
 }
+
 BYTE OutCommand(BYTE command)
 {
-	BYTE dataIn;
+	BYTE status;
 	RF_CSN = 0;
-	dataIn = OutByte(command);
+	status = OutInByte(command);
 	RF_CSN = 1;
-	return dataIn;
+	return status;
 }
-
 BYTE OutCommandByte(BYTE command, BYTE byte)
 {
-	BYTE response;
+	BYTE inByte;
 	RF_CSN = 0;
-	OutByte(command);
-	response = OutByte(byte);
+	OutInByte(command);
+	inByte = OutInByte(byte);
 	RF_CSN = 1;
-	return response;
+	return inByte;
 }
-
-BYTE* OutCommandData(BYTE command, BYTE *data, BYTE dataLength)
+BYTE OutCommandData(BYTE command, BYTE *data, BYTE dataLength)
 {
-	BYTE *response;
+	BYTE status;
 	RF_CSN = 0;
-	OutByte(command);
-	response = OutData(data, dataLength);
+	status = OutInByte(command);
+	OutData(data, dataLength);
 	RF_CSN = 1;
-	return response;
+	return status;
 }
 
 BYTE WriteRegister(BYTE reg, BYTE byte)
 {
 	BYTE command;
-	//FIXME: return error if and 'ADRESS' register is provided
-	//return error if non-existant register is given
+	//early return if non-existant register is provided
+	//FIXME: disallow adress registers
 	if ((reg > MAX_REGISTER_ADDRESS) && (reg != FEATURE) && (reg != DYNPD))
-		return (0);
+		return (1);
 
 	command = W_REGISTER + reg;
-	return OutCommandByte(command, byte);
+	OutCommandByte(command, byte);
+	return (0);
 }
-BYTE* WriteAdrRegister(BYTE reg, BYTE data[], BYTE length)
+BYTE WriteAdrRegister(BYTE reg, BYTE data[], BYTE length)
 {
 	BYTE command;
-	if((reg != RX_ADDR_P0) || (reg != RX_ADDR_P1) || (reg != TX_ADDR))
-		return 0;
+	//Early return if address register is not selected or address length is too long
+	if((reg != RX_ADDR_P0) || (reg != RX_ADDR_P1) || (reg != TX_ADDR) || length > 5)
+		return (1);
 
 	//Create command to write given register, send command
 	command = W_REGISTER + reg;
-	return OutCommandData(command, data, length);
+	OutCommandData(command, data, length);
+	return (0);
 }
-
 BYTE ReadRegister(BYTE reg)
 {
 	BYTE command;
@@ -105,30 +106,14 @@ BYTE ReadRegister(BYTE reg)
 	return OutCommandByte(command,0xFF);
 }
 
-BYTE InByte(void)
-{
-	BYTE ofst, data=0;
-
-	/* clock in the data from msb to lsb */
-	for (ofst=0; ofst<8; ofst++)
-	{
-		RF_SCK = 1;
-		data <<= 1;
-		data |= RF_MISO;
-		RF_SCK = 0;
-   }
-	return data;
-}
-void InData(BYTE data[], BYTE length)
-{
-	BYTE count;
-	for (count = 0; count < length; count++)
-		data[count] = InByte();
-}
 void ReadRxPayload(BYTE data[], BYTE length)
 {
 	RF_CSN = 0;
-	OutByte(R_RX_PAYLOAD);
+	OutInByte(R_RX_PAYLOAD);
 	InData(data, length);
 	RF_CSN = 1;
+}
+void WriteTxPayload(BYTE data[], BYTE length)
+{
+	OutCommandData(W_TX_PAYLOAD, data, length);
 }

@@ -92,30 +92,30 @@
 void RfPicInit(void);
 void XmitInit(void);
 void RecvInit(void);
-void RfShockBurstInit(BYTE address[], BYTE mode);
+void RfShockBurstInit(BYTE address[], BYTE mode, BYTE payloadWidth);
 
-void XmitPacket(BYTE data);
-BYTE RecvPacket(BYTE *data);
+
 BYTE CheckInterrupt(BYTE intrupt);
 void pause(BYTE max);
 BYTE calc(BYTE ofst, BYTE chan);
 void nop(void);
 
-BYTE XmitPacket2(BYTE *data, BYTE length);
-BYTE RecvPacket2(BYTE *payload);
+BYTE XmitPacket(BYTE *data, BYTE length);
+BYTE RecvPacket(BYTE *payload, BYTE length);
 
 
 /*Data Operation Prototypes*/
-BYTE  OutByte(BYTE data);
-BYTE* OutData(BYTE data[], BYTE length);
-BYTE  OutCommand(BYTE command);
-BYTE  OutCommandByte(BYTE command, BYTE byte);
-BYTE* OutCommandData(BYTE command, BYTE data[], BYTE dataLength);
-BYTE  WriteRegister(BYTE reg, BYTE byte);
-BYTE* WriteAdrRegister(BYTE reg, BYTE data[], BYTE length);
-BYTE  ReadRegister(BYTE reg);
-BYTE  InByte(void);
+BYTE OutInByte(BYTE data);
+void OutData(BYTE data[], BYTE length);
+BYTE OutCommand(BYTE command);
+BYTE OutCommandByte(BYTE command, BYTE byte);
+BYTE OutCommandData(BYTE command, BYTE data[], BYTE dataLength);
+BYTE WriteRegister(BYTE reg, BYTE byte);
+BYTE WriteAdrRegister(BYTE reg, BYTE data[], BYTE length);
+BYTE ReadRegister(BYTE reg);
+BYTE InByte(void);
 void InData(BYTE data[], BYTE length);
 void PulseCe(void);
 void RfConfigure(BYTE bitNum, BYTE enable);
 void ReadRxPayload(BYTE data[], BYTE length);
+void WriteTxPayload(BYTE data[], BYTE length);

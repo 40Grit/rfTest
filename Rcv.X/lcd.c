@@ -109,3 +109,8 @@ void LcdBusy(BYTE reg, BYTE data)
 
    LcdWrite(reg, data);
 }
+
+void LcdClear(void)
+{
+	LcdWrite(LCD_RS_CNTL, 0x01);
+}

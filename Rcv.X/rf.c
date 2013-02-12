@@ -12,7 +12,7 @@ void RfPicInit(void)
 	CMCON = 0x07; //disable comparator for relevent pins
 }
 
-void RfShockBurstInit(BYTE address[], BYTE mode)
+void RfShockBurstInit(BYTE address[], BYTE mode, BYTE payloadWidth)
 {
 	BYTE temp;
 	RF_CE = 0;
@@ -35,9 +35,9 @@ void RfShockBurstInit(BYTE address[], BYTE mode)
 	//Set 5 byte address width
 	WriteRegister(SETUP_AW, 0x03);
 	//set tx address
-	//WriteAdrRegister(TX_ADDR, address, 5);
+	WriteAdrRegister(TX_ADDR, address, 5);
 	//set pipe 0 address
-	//WriteAdrRegister(RX_ADDR_P0, address, 5);
+	WriteAdrRegister(RX_ADDR_P0, address, 5);
 
 	//set mode: tx or rx
 	if (mode == MODE_TX)
@@ -45,7 +45,7 @@ void RfShockBurstInit(BYTE address[], BYTE mode)
 	else
 	{
 		RfConfigure(PRIM_RX, 1);
-		WriteRegister(RX_PW_P0, 32);
+		WriteRegister(RX_PW_P0, payloadWidth);
 		RF_CE = 1;
 	}
 
@@ -61,107 +61,8 @@ void RfShockBurstInit(BYTE address[], BYTE mode)
 
 }
 
-/*XmitInit: Initialize the rf circuit for transmitting*/
-void XmitInit(void)
-{
-	BYTE address[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
-
-	//TODO: Dunno if this does anything
-	RF_CE = 0;
-	RF_CSN = 1;
-	RF_SCK = 0;
-	nop();
-	//^^^^^^^^^^^^^^^^^
-
-	WriteRegister(CONFIG, 0x00);
-	/* select transmit, mask out interrupts */
-	WriteRegister(CONFIG, 0x38);
-	/* disable auto retransmit */
-	WriteRegister(SETUP_RETR, 0x00);
-	/* address width = 5 bytes */
-	WriteRegister(SETUP_AW, 0x03);
-	/* data rate = 1 MB, 0dBM */
-	WriteRegister(RF_SETUP, 0x07);
-	/* channel 2 */
-	WriteRegister(RF_CH, 0x02);
-
-	/* set address E7E7E7E7E7 */
-	WriteAdrRegister(TX_ADDR, address, 5);
-	WriteAdrRegister(RX_ADDR_P0, address, 5);
-
-	/* disable auto retransmit*/
-	WriteRegister(EN_AA, 0x00);
-
-}
-
-/*RecvInit: Initialize the rf circuit for receiving*/
-void RecvInit(void)
-{
-	BYTE address[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
-	RF_CE = 0;
-	RF_CSN = 1;
-	RF_SCK = 0;
-	nop();
-
-	/* select receive, mask out interrupts */
-	WriteRegister(CONFIG, 0x39);
-	/* disable auto-ack for all channels */
-	WriteRegister(EN_AA, 0x00);
-	/* address width = 5 bytes */
-	WriteRegister(SETUP_AW, 0x03);
-	/* data rate = 1 MB */
-	WriteRegister(RF_SETUP, 0x07);
-	/* 1 byte payload width expected */
-	WriteRegister(RX_PW_P0, 0x01);
-	/* channel 2 */
-	WriteRegister(RF_CH, 0x02);
-	/* set address E7E7E7E7E7 */
-	WriteAdrRegister(TX_ADDR, address, 5);
-	/* PWR_UP = 1 */
-	RfConfigure(PWR_UP, 1);
-	RF_CE = 1;
-	pause(5);
-}
-
 /*XmitPacket: send a data byte/block to the rf module*/
-void XmitPacket(BYTE data)
-{
-	RF_CE = 0;
-
-	/* clear previous intrupts */
-	WriteRegister(STATUS, (STATUS_MAX_RT + STATUS_RX_DR + STATUS_TX_DS));
-
-	//WriteRegister(CONFIG,0x3A);
-	RfConfigure(PWR_UP, 1); /*Power up radio*/
-	pause(5);
-	OutCommand(FLUSH_TX);
-
-	OutCommandByte(W_TX_PAYLOAD, data);
-
-	PulseCe(); /*Pulse Chip Enable to do RF*/
-}
-
-/*RecvPacket: check/receive an packet from the rf module*/
-BYTE RecvPacket(BYTE *data)
-{
-	/* make sure data is present */
-	if (!CheckInterrupt(STATUS_RX_DR))
-		return (0);
-
-	RF_CE = 0;
-	/* read RX payload (repeat for as many incoming bytes) */
-	*data = OutCommandByte(R_RX_PAYLOAD, 0xFF);
-
-	OutCommand(FLUSH_RX);
-	WriteRegister(STATUS, STATUS_RX_DR); /*reset intrupts*/
-
-	RF_CE = 1;
-	pause(5);
-	return (1);
-}
-
-/*XmitPacket: send a data byte/block to the rf module*/
-BYTE XmitPacket2(BYTE *data, BYTE length)
+BYTE XmitPacket(BYTE *data, BYTE length)
 {
 	RF_CE = 0;
 
@@ -173,7 +74,7 @@ BYTE XmitPacket2(BYTE *data, BYTE length)
 	WriteRegister(STATUS, (STATUS_TX_DS | STATUS_RX_DR | STATUS_MAX_RT));
 
 	//load tx fifo
-	OutCommandData(W_TX_PAYLOAD, data, 32);
+	WriteTxPayload(data, length);
 
 	//send packet
 	PulseCe();
@@ -195,7 +96,7 @@ BYTE XmitPacket2(BYTE *data, BYTE length)
 }
 
 /*RecvPacket: check/receive an packet from the rf module*/
-BYTE RecvPacket2(BYTE *payload)
+BYTE RecvPacket(BYTE *payload, BYTE length)
 {
 	/* make sure data is present */
 	if (!CheckInterrupt(STATUS_RX_DR))
@@ -203,7 +104,7 @@ BYTE RecvPacket2(BYTE *payload)
 	
 	RF_CE = 0;//Disable radio
 	/* read RX payload, which is blah bytes long*/
-	ReadRxPayload(payload, 32);
+	ReadRxPayload(payload, length);
 
 	/* Flush RX FIFO */
 	OutCommand(FLUSH_RX);

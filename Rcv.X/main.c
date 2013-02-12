@@ -13,11 +13,8 @@
 #pragma config MCLRE	= OFF
 #pragma config LVP		= OFF
 
-void oneByteTest(void);
-void RangeTestRx(void);
 void intToCharArray(int num, char array[]);
 void ModeSelectInit(void);
-void RangeTestTx(void);
 void ShockBurstRxTest(void);
 void ShockBurstTxTest(void);
 
@@ -31,81 +28,16 @@ void main(void)
 	//PORTCbits.RC0 ? (RangeTestRx()):(RangeTestTx());
 }
 
-void RangeTestTx(void)
-{
-	int count;
-	BYTE testData = 0x01;
-	XmitInit();
-	while (1)
-	{
-		for(count=0;count<200;count++);  //Pause to let receiver 'cath-up'
-	
-		XmitPacket(testData++);			 //Send the test BYTE and increment it
-		
-		if (testData > 100)				 //if 100 bytes have been sent
-		{
-			XmitPacket(0xFF);			 //send indicator 0xFF
-			testData = 0x01;			 //reset testData
-		}
-	}
-
-}
-
-void RangeTestRx(void)
-{
-    BYTE data;
-    int count = 0;
-	int sum = 0;
-    long missCount = 0;
-    char countString[8] = "       ";
-	char sumString[8]	= "       ";
-    char lostRf[8] = "Lost RF";
-
-	LcdInit();
-	RecvInit();
-
-    while(1)
-    {
-        while (RecvPacket(&data) == 0)
-        {
-            if (missCount++ >= 100000)
-            {
-				LcdBusy(LCD_RS_CNTL, 0x01);
-				LcdText(0,0,lostRf);
-				missCount = 0;
-            }
-        }
-
-        //if 100 bytes indicator received, 0xFF, isn't received continue
-        if (data <= 100)
-		{
-			sum += data;
-			count++;
-            continue;
-		}
-
-        //turn the count into characters for display
-        intToCharArray(count, countString);
-		intToCharArray(sum, sumString);
-        LcdBusy(LCD_RS_CNTL, 0x01);         //clear lcd screen
-        LcdText(0,0, countString);          //display the count
-		LcdText(0x40,0, sumString);			//display the sum
-		sum = 0;
-        count = 0;                          //reset
-    }
-
-}
-
 void ShockBurstRxTest(void)
 {
 	char initialText[12] = "InitialText";
 	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
-	BYTE data[32];
+	BYTE data[2];
    
 	/*Initialize LCD screen*/
 	LcdInit();
 	/*Initialize nRF24l01+ for enhance shockburst in recieve mode */
-	RfShockBurstInit(addr, MODE_RX);
+	RfShockBurstInit(addr, MODE_RX, 2);
 	/*write iniital text to lcd*/
 	LcdText(0,0,initialText);
 
@@ -113,25 +45,36 @@ void ShockBurstRxTest(void)
 	/*print data to lcd screen when received*/
 	while(1)
 	{
-		while (RecvPacket2(data));
+		while (RecvPacket(data, 2));
+		LcdClear();
 		LcdText(0,0, data);
 	}
 }
 
 void ShockBurstTxTest(void)
 {
-	BYTE testData[32] = "ShockBurst \0";
+	BYTE testData[2] = "!";
 	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
+	BYTE test = 0;
 	/*Initialize nRF24l01+ for enhance shockburst in transmit mode */
-	RfShockBurstInit(addr, MODE_TX);
+	RfShockBurstInit(addr, MODE_TX, 2);
 
 	/*Constantly send the test string*/
 	while (1)
 	{
-		pause(10);
-		XmitPacket2(testData, 32);		//Send the test BYTE and increment it
+		for(test = 0; test<1; test++) pause(255);
+		if (testData[0] == 0xFF) testData[0] = 0x21;
+		testData[0]++;
+		XmitPacket(testData, 2);
 	}
 }
+
+/*initializes a bit on port c as input*/
+void ModeSelectInit(void)
+{
+	TRISCbits.RC0 = 1;
+}
+
 /*Determines the string representation
  of an int input and places in character string*/
 void intToCharArray(int num, char array[8])
@@ -141,7 +84,7 @@ void intToCharArray(int num, char array[8])
     char index  = 0;
 
     char buf[9] = "        ";
-    
+
     //Grab each digit in given integer add 0x30 to get to ascii,
     //Breaks if all digits have been placed in the buffer
     while(1)
@@ -150,7 +93,7 @@ void intToCharArray(int num, char array[8])
         num /= 10;
         if (!num) break;
     }
-    
+
     //Place buffer into given array, back to front, for proper display
     for(index=0; index < length; index++)
     {
@@ -159,25 +102,4 @@ void intToCharArray(int num, char array[8])
 
     //terminate string
     array[index] = '\0';
-}
-
-void oneByteTest(void)
-{
-   BYTE data;
-   char okay[5]   = {"okay"};
-   char bad[4]    = {"bad"};
-   while(1)
-   {
-    while (RecvPacket(&data) == 0);
-    if(data == 0xF4)
-        LcdText(0,0,okay);
-    else
-        LcdText(0,0,bad);
-   }
-}
-
-/*initializes a bit on port c as input*/
-void ModeSelectInit(void)
-{
-	TRISCbits.RC0 = 1;
 }
