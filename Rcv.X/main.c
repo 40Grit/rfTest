@@ -37,7 +37,12 @@ void ShockBurstRxTest(void)
 	BYTE byteCounter;
 	BYTE receivedString[4];
 	BYTE counterString[4];
-   
+	BYTE rcvCount;
+
+	int diff;
+	int percent;
+	BYTE percentString[4];
+	
 	/*Initialize LCD screen*/
 	LcdInit();
 	/*Initialize nRF24l01+ for enhance shockburst in recieve mode */
@@ -48,7 +53,7 @@ void ShockBurstRxTest(void)
 	//Block until first byte is received,
 	//This byte will track what future received bytes should be
 	while(RecvPacket(&byteCounter, 1));
-	while(1)
+	for(rcvCount = 0; rcvCount <0xFF; rcvCount++)
 	{
 		//Increment byteCounter for next Receive
 		byteCounter++;
@@ -61,6 +66,8 @@ void ShockBurstRxTest(void)
 		LcdText(0,0, receivedString);
 		LcdText(0x40,0,counterString);
 	}
+
+	while(1);
 }
 
 void ShockBurstTxTest(void)
@@ -75,7 +82,7 @@ void ShockBurstTxTest(void)
 	/*Constantly send the test string*/
 	while (1)
 	{
-		for(delay = 0; delay<3; delay++) pause(255);
+		for(delay = 0; delay<1; delay++) pause(100);
 		XmitPacket(&testByte, 1);
 		testByte++;
 	}
