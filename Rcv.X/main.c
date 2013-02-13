@@ -14,6 +14,7 @@
 #pragma config LVP		= OFF
 
 void intToCharArray(int num, char array[]);
+void byteToCharArray(BYTE num, BYTE array[4]);
 void ModeSelectInit(void);
 void ShockBurstRxTest(void);
 void ShockBurstTxTest(void);
@@ -32,40 +33,51 @@ void ShockBurstRxTest(void)
 {
 	char initialText[12] = "InitialText";
 	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
-	BYTE data[2];
+	BYTE byteReceived;
+	BYTE byteCounter;
+	BYTE receivedString[4];
+	BYTE counterString[4];
    
 	/*Initialize LCD screen*/
 	LcdInit();
 	/*Initialize nRF24l01+ for enhance shockburst in recieve mode */
-	RfShockBurstInit(addr, MODE_RX, 2);
+	RfShockBurstInit(addr, MODE_RX, 1);
 	/*write iniital text to lcd*/
 	LcdText(0,0,initialText);
 
-	/*block while no data has been received*/
-	/*print data to lcd screen when received*/
+	//Block until first byte is received,
+	//This byte will track what future received bytes should be
+	while(RecvPacket(&byteCounter, 1));
 	while(1)
 	{
-		while (RecvPacket(data, 2));
+		//Increment byteCounter for next Receive
+		byteCounter++;
+		while (RecvPacket(&byteReceived, 1));
+
+		byteToCharArray(byteReceived, receivedString);
+		byteToCharArray(byteCounter, counterString);
+
 		LcdClear();
-		LcdText(0,0, data);
+		LcdText(0,0, receivedString);
+		LcdText(0x40,0,counterString);
 	}
 }
 
 void ShockBurstTxTest(void)
 {
-	BYTE testData[2] = "!";
 	BYTE addr[] = {0xE7,0xE7,0xE7,0xE7,0xE7};
-	BYTE test = 0;
+	BYTE testByte = 0;
+	BYTE delay = 0;
+
 	/*Initialize nRF24l01+ for enhance shockburst in transmit mode */
-	RfShockBurstInit(addr, MODE_TX, 2);
+	RfShockBurstInit(addr, MODE_TX, 1);
 
 	/*Constantly send the test string*/
 	while (1)
 	{
-		for(test = 0; test<1; test++) pause(255);
-		if (testData[0] == 0xFF) testData[0] = 0x21;
-		testData[0]++;
-		XmitPacket(testData, 2);
+		for(delay = 0; delay<3; delay++) pause(255);
+		XmitPacket(&testByte, 1);
+		testByte++;
 	}
 }
 
@@ -73,6 +85,33 @@ void ShockBurstTxTest(void)
 void ModeSelectInit(void)
 {
 	TRISCbits.RC0 = 1;
+}
+
+void byteToCharArray(BYTE num, BYTE array[4])
+{
+    BYTE digit = num;
+    BYTE length = 0;
+    BYTE index  = 0;
+
+    BYTE buf[4] = "   ";
+
+    //Grab each digit in given integer add 0x30 to get to ascii,
+    //Breaks if all digits have been placed in the buffer
+    while(1)
+    {
+        buf[length++] = (num % 10) + 0x30;
+        num /= 10;
+        if (!num) break;
+    }
+
+    //Place buffer into given array, back to front, for proper display
+    for(index=0; index < length; index++)
+    {
+        array[index] = buf[length - 1 - index];
+    }
+
+    //terminate string
+    array[index] = '\0';
 }
 
 /*Determines the string representation
