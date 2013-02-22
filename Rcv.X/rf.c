@@ -1,3 +1,10 @@
+/*rf.c contains functions to initialize an nRF24L01+
+ *in enhanced shockburst mode as a primary receiver
+ *or primary transmitter, send/receive packets,
+ *and check IRQ interrupts
+ *NOTE: consider this unfinished
+ */
+
 #include "rf.h"
 
 /*RfInit(): configure the hardware*/
@@ -12,9 +19,9 @@ void RfPicInit(void)
 	CMCON = 0x07; //disable comparator for relevent pins
 }
 
+/*Provide a 'device address', mode (MODE_TX, MODE_RX), and a static payload width*/
 void RfShockBurstInit(BYTE address[], BYTE mode, BYTE payloadWidth)
 {
-	BYTE temp;
 	RF_CE = 0;
 	RF_CSN = 1;
 	RF_SCK = 0;
@@ -56,8 +63,7 @@ void RfShockBurstInit(BYTE address[], BYTE mode, BYTE payloadWidth)
 	//FIXME: start a timer
 	pause(5);
 	//wait for timer
-	/*FIXME: Implement state?*/
-	//set state
+	/*TODO: Implement state?*/
 
 }
 
@@ -95,7 +101,7 @@ BYTE XmitPacket(BYTE *data, BYTE length)
 	//set state
 }
 
-/*RecvPacket: check/receive an packet from the rf module*/
+/*RecvPacket: check/receive a packet from the rf module*/
 BYTE RecvPacket(BYTE *payload, BYTE length)
 {
 	/* make sure data is present */
@@ -153,13 +159,16 @@ void PulseCe(void)
 }
 
 /*pause(max): delay for "max" times .5 msec*/
+/*FIXME: TRUTH???^^^^*/
 void pause(BYTE max)
 {
 	BYTE ofst;
 	BYTE count;
 	for (count = 0; count < max; count++)
 	{
+
 		/* this delays for .5 msec */
+		//FIXME:TRUTH?^^^^^^^
 		for (ofst = 0; ofst < 97; ofst++)
 			nop();
 	}

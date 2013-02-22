@@ -1,5 +1,8 @@
 /*rf.h
- *1/31/2013
+ *Contains:
+ * :Hardware control definitions to interface an nRF24L01+ to a PIC18F2520
+ * :defintions for the nRF24L01+'s register adresses
+ * :function prototypes for rf.c & nRFdata.c
  */
 
 //pic18f250 - http://ww1.microchip.com/downloads/en/DeviceDoc/39631E.pdf

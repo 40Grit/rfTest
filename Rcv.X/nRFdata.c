@@ -1,6 +1,8 @@
 #include "rf.h"
-/*Contains basic functions to transfer
- *data between micro and nRF24L01+*/
+/*Contains low level functions to transfer
+ *data between micro and nRF24L01+
+ *NOTE:consider this unfinished
+ */
 
 
 /*OutByte(data): byte is clocked out to the RF module,
@@ -28,12 +30,17 @@ BYTE OutInByte(BYTE byte)
    }
    return(dataIn);
 }
+
+/*Reads length bytes of data from nRF into data[]
+ *Sends 0xFF(NOP) in case nRF isn't writing*/
 void InData(BYTE data[], BYTE length)
 {
 	BYTE count;
 	for (count = 0; count < length; count++)
 		data[count] = OutInByte(0xFF);
 }
+
+/*Writes length bytes from *data to MOSI port*/
 void OutData(BYTE *data, BYTE length)
 {
 	BYTE index = 0;
@@ -43,6 +50,8 @@ void OutData(BYTE *data, BYTE length)
 	}
 }
 
+/*COMMAND FUNCTIONS
+ *These functions send 1, 2, and multi-byte commands respectively*/
 BYTE OutCommand(BYTE command)
 {
 	BYTE status;
@@ -70,11 +79,15 @@ BYTE OutCommandData(BYTE command, BYTE *data, BYTE dataLength)
 	return status;
 }
 
+/*Register IO function
+ These functions will write & read the nRF's one byte registers
+ WriteAdrRegister will write the 5 byte "device address" registers
+ */
 BYTE WriteRegister(BYTE reg, BYTE byte)
 {
 	BYTE command;
 	//early return if non-existant register is provided
-	//FIXME: disallow adress registers
+	//FIXME: disallow address registers
 	if ((reg > MAX_REGISTER_ADDRESS) && (reg != FEATURE) && (reg != DYNPD))
 		return (1);
 
@@ -105,7 +118,9 @@ BYTE ReadRegister(BYTE reg)
 	command = R_REGISTER + reg;
 	return OutCommandByte(command,0xFF);
 }
+//FIXME: make a ReadAdrRegister function
 
+/*Convenience functions to read and write payloads*/
 void ReadRxPayload(BYTE data[], BYTE length)
 {
 	RF_CSN = 0;
